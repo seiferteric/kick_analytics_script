@@ -7,6 +7,8 @@ require 'csv'
 
 SEARCH_TERMS = 'tabletop games'
 PROJECT_LIMIT = nil
+
+start_time = Time.now
 client = Kickscraper.client
 projects = []
 page_num = 1
@@ -18,7 +20,7 @@ loop do
   break if PROJECT_LIMIT and projects.count >= PROJECT_LIMIT
   page_num += 1
 end
-projects.pop(projects.count - PROJECT_LIMIT) if projects.count > PROJECT_LIMIT
+projects.pop(projects.count - PROJECT_LIMIT) if PROJECT_LIMIT and projects.count > PROJECT_LIMIT
 puts "Found #{projects.count} projects"
 
 CSV.open("report.csv", "wb") do |csv|
@@ -35,3 +37,5 @@ CSV.open("report.csv", "wb") do |csv|
     csv << row
   end
 end
+stop_time = Time.now
+puts "Run time was #{stop_time - start_time} seconds"
