@@ -4,7 +4,7 @@ require 'kickscraper'
 require 'open-uri'
 require 'nokogiri'
 require 'csv'
-
+require 'ruby-progressbar'
 SEARCH_TERMS = 'tabletop games'
 PROJECT_LIMIT = nil
 
@@ -25,9 +25,14 @@ puts "Found #{projects.count} projects"
 
 CSV.open("report.csv", "wb") do |csv|
   csv << ["ID", "Name", "State", "Country", "Currency", "Launch Date", "Deadline", "Created At", "Category", "Location", "Backers", "Goal", "Pledged", "# of Rewards"]
+  prog = ProgressBar.create(:total => projects.count, :title => "Rewards")
   projects.each do |project|
-    print "#{project.id} " 
-    doc = Nokogiri::HTML(open(project.urls.web.rewards))
+    begin
+      doc = Nokogiri::HTML(open(project.urls.web.rewards))
+    rescue
+      puts "Failed to get rewards info for project id #{project.id} with URL: #{project.urls.web.rewards} SKIPPING"
+      next
+    end
     rewards = doc.css("span.money").map(&:text)
     num_backers = doc.css("span.num-backers").map(&:text).map do |s| s.strip end
     row = [project.id, project.name, project.state, project.country, project.currency, Time.at(project.launched_at), Time.at(project.deadline), Time.at(project.created_at), project.category, project.location.displayable_name, project.backers_count, project.goal, project.pledged, rewards.count]
@@ -35,6 +40,7 @@ CSV.open("report.csv", "wb") do |csv|
       row << "#{r} : #{b}"
     end
     csv << row
+    prog.increment
   end
 end
 stop_time = Time.now
