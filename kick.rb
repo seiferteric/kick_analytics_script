@@ -14,7 +14,12 @@ projects = []
 page_num = 1
 loop do 
   puts "Getting Page #{page_num}"
-  page_projs = client.search_projects(SEARCH_TERMS, page_num)
+  begin
+    page_projs = client.search_projects(SEARCH_TERMS, page_num)
+  rescue
+    puts "Failed to get page #{page_num} retrying"
+    retry
+  end
   projects.concat page_projs
   break if page_projs.count == 0
   break if PROJECT_LIMIT and projects.count >= PROJECT_LIMIT
@@ -24,18 +29,18 @@ projects.pop(projects.count - PROJECT_LIMIT) if PROJECT_LIMIT and projects.count
 puts "Found #{projects.count} projects"
 
 CSV.open("report.csv", "wb") do |csv|
-  csv << ["ID", "Name", "State", "Country", "Currency", "Launch Date", "Deadline", "Created At", "Category", "Location", "Backers", "Goal", "Pledged", "# of Rewards"]
+  csv << ["ID", "Name", "State", "Country", "Currency", "Launch Date", "Deadline", "Created At", "Category", "Backers", "Goal", "Pledged", "# of Rewards"]
   prog = ProgressBar.create(:total => projects.count, :title => "Projects")
   projects.each do |project|
     begin
       doc = Nokogiri::HTML(open(project.urls.web.rewards))
     rescue
       puts "Failed to get rewards info for project id #{project.id} with URL: #{project.urls.web.rewards} SKIPPING"
-      next
+      retry
     end
     rewards = doc.css("span.money").map(&:text)
     num_backers = doc.css("span.num-backers").map(&:text).map do |s| s.strip end
-    row = [project.id, project.name, project.state, project.country, project.currency, Time.at(project.launched_at), Time.at(project.deadline), Time.at(project.created_at), project.category, project.location.displayable_name, project.backers_count, project.goal, project.pledged, rewards.count]
+    row = [project.id, project.name, project.state, project.country, project.currency, Time.at(project.launched_at), Time.at(project.deadline), Time.at(project.created_at), project.category, project.backers_count, project.goal, project.pledged, rewards.count]
     rewards.zip(num_backers).each do |r, b|
       row << "#{r} : #{b}"
     end
