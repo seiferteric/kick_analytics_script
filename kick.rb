@@ -5,26 +5,30 @@ require 'open-uri'
 require 'nokogiri'
 require 'csv'
 
-PROJECT_LIMIT = 100
-
+SEARCH_TERMS = 'tabletop games'
+PROJECT_LIMIT = nil
 client = Kickscraper.client
 projects = []
 page_num = 1
 loop do 
-  page_projs = client.search_projects('board game', page_num)
+  puts "Getting Page #{page_num}"
+  page_projs = client.search_projects(SEARCH_TERMS, page_num)
   projects.concat page_projs
-  break if projects.count >= PROJECT_LIMIT or page_projs.count == 0
+  break if page_projs.count == 0
+  break if PROJECT_LIMIT and projects.count >= PROJECT_LIMIT
   page_num += 1
 end
+projects.pop(projects.count - PROJECT_LIMIT) if projects.count > PROJECT_LIMIT
+puts "Found #{projects.count} projects"
 
 CSV.open("report.csv", "wb") do |csv|
-  csv << ["ID", "Name", "State", "Launch Date", "Category", "Goal", "Pledged", "# of Rewards"]
+  csv << ["ID", "Name", "State", "Country", "Currency", "Launch Date", "Deadline", "Created At", "Category", "Location", "Backers", "Goal", "Pledged", "# of Rewards"]
   projects.each do |project|
-    
+    print "#{project.id} " 
     doc = Nokogiri::HTML(open(project.urls.web.rewards))
     rewards = doc.css("span.money").map(&:text)
     num_backers = doc.css("span.num-backers").map(&:text).map do |s| s.strip end
-    row = [project.id, project.name, project.state, Time.at(project.launched_at), project.category, project.goal, project.pledged, rewards.count]
+    row = [project.id, project.name, project.state, project.country, project.currency, Time.at(project.launched_at), Time.at(project.deadline), Time.at(project.created_at), project.category, project.location.displayable_name, project.backers_count, project.goal, project.pledged, rewards.count]
     rewards.zip(num_backers).each do |r, b|
       row << "#{r} : #{b}"
     end
