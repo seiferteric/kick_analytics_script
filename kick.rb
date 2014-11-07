@@ -25,7 +25,7 @@ puts "Found #{projects.count} projects"
 
 CSV.open("report.csv", "wb") do |csv|
   csv << ["ID", "Name", "State", "Country", "Currency", "Launch Date", "Deadline", "Created At", "Category", "Location", "Backers", "Goal", "Pledged", "# of Rewards"]
-  prog = ProgressBar.create(:total => projects.count, :title => "Rewards")
+  prog = ProgressBar.create(:total => projects.count, :title => "Projects")
   projects.each do |project|
     begin
       doc = Nokogiri::HTML(open(project.urls.web.rewards))
