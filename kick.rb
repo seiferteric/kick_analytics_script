@@ -8,7 +8,7 @@ require 'ruby-progressbar'
 
 SEARCH_TERMS = 'tabletop games'
 # Number or nil to disable
-PROJECT_LIMIT = 200
+PROJECT_LIMIT = nil
 
 start_time = Time.now
 client = Kickscraper.client
