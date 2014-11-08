@@ -5,8 +5,10 @@ require 'open-uri'
 require 'nokogiri'
 require 'csv'
 require 'ruby-progressbar'
+
 SEARCH_TERMS = 'tabletop games'
-PROJECT_LIMIT = nil
+# Number or nil to disable
+PROJECT_LIMIT = 200
 
 start_time = Time.now
 client = Kickscraper.client
@@ -30,16 +32,16 @@ puts "Found #{projects.count} projects"
 
 CSV.open("report.csv", "wb") do |csv|
   csv << ["ID", "Name", "State", "Country", "Currency", "Launch Date", "Deadline", "Created At", "Category", "Backers", "Goal", "Pledged", "# of Rewards"]
-  prog = ProgressBar.create(:total => projects.count, :title => "Projects")
+  prog = ProgressBar.create(:total => projects.count, :title => "Projects", :format => '%a %B %p%% %r pages/sec %e')
   projects.each do |project|
     begin
       doc = Nokogiri::HTML(open(project.urls.web.rewards))
     rescue
-      puts "Failed to get rewards info for project id #{project.id} with URL: #{project.urls.web.rewards} SKIPPING"
+      puts "Failed to get rewards info for project id #{project.id} with URL: #{project.urls.web.rewards} retrying"
       retry
     end
     rewards = doc.css("span.money").map(&:text)
-    num_backers = doc.css("span.num-backers").map(&:text).map do |s| s.strip end
+    num_backers = doc.css("span.num-backers").map(&:text).map(&:strip)
     row = [project.id, project.name, project.state, project.country, project.currency, Time.at(project.launched_at), Time.at(project.deadline), Time.at(project.created_at), project.category, project.backers_count, project.goal, project.pledged, rewards.count]
     rewards.zip(num_backers).each do |r, b|
       row << "#{r} : #{b}"
